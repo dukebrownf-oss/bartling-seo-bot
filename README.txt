@@ -1,92 +1,118 @@
-# Adam Bartling | Texas Mortgage Broker — SEO Bot for Claude Code
+# SEO_REVIEW_RUBRIC.md — Yoast-style advisory for each page
+### v2 — July 19, 2026 (matches CLAUDE.md July 2026)
 
-A Claude Code project that scans each bartlinglending.com web page **one at a time**, fixes anything
-that breaks the brand/compliance/SEO rules, drops the corrected page into your **Google Drive**, and
-writes a short report with **new SEO/UX suggestions** — then stops and waits for your go-ahead before
-the next page.
-
-> **Rules version: July 19, 2026.** Brand is FINAL ("Adam Bartling | Texas Mortgage Broker").
-> Fix & Flip / Hard Money / Commercial are DISCONTINUED. See `CLAUDE.md` for the full rulebook.
+After a page passes compliance (`qc_scan.py` = PASS), evaluate it against the checklist below and
+write **only the high-value, *new* suggestions** — things we have NOT already done — into
+`reports/<slug>.md`. Quality over quantity: 3–8 strong recommendations beat 30 trivial ones.
+Never recommend fee-based directories or anything that violates the rules in CLAUDE.md.
 
 ---
 
-## Files
+## What to evaluate
 
-| File | What it is |
-|------|-----------|
-| `CLAUDE.md` | The rulebook + the page-by-page workflow. Claude Code reads this automatically. **This is the brain.** |
-| `scripts/qc_scan.py` | Offline compliance scanner (v2, July 2026 rules). `python scripts/qc_scan.py pages/<slug>.html` → PASS/FAIL + line numbers. |
-| `scripts/verify_links_images.py` | Curls every image + internal link → flags anything not HTTP 200. **Exemption:** `nmlsconsumeraccess.org` returns 403 to curl (Cloudflare bot protection) but is live — never flag it. |
-| `worklist.csv` | The queue: every page, in priority order, with status (pending/done/skip). |
-| `SEO_REVIEW_RUBRIC.md` | The "Yoast-style" advisory checklist + the per-page report template. |
-| `pages/` | Page source HTML goes here (one file per page). Claude Code fetches any that are missing. |
-| `reports/` | Per-page reports land here. |
+**1. Title & meta (the Yoast core)**
+- Title tag ≤ ~60 chars, leads with the focus keyphrase, includes "Texas," ends with brand
+  ("Adam Bartling" or "Adam Bartling | Texas Mortgage Broker" as space allows).
+- Meta description ≤ ~155 chars, contains the keyphrase + a concrete hook (broker value / CTA) +
+  "Texas." **Never a numeric rate figure.**
+- Focus keyphrase appears in: H1, first 100 words, at least one H2, the meta, the slug, one alt text.
+- Slug is clean, singular ("…-loan-texas"), matches the canonical. Canonical includes the trailing
+  slash (slashless manual canonicals split signals — flag any).
+
+**2. Heading structure & keyword coverage**
+- Exactly one H1; logical H2 > H3 nesting; no skipped levels.
+- H2s phrased as natural questions where it helps AEO ("What is…", "How much…", "Can I…").
+- LSI / variation coverage (e.g., for FHA: "down payment assistance," "MIP," "580 credit score,"
+  "first-time buyer," county names) — note gaps.
+
+**3. Internal linking (whitelist only — see CLAUDE.md §7)**
+- Does the page link OUT to 3–6 relevant whitelisted cornerstones? Flag under-linking.
+- Does it link to the pages a reader would naturally want next (e.g., FHA ↔ First-Time ↔ Conventional)?
+- For cornerstones: are city/hub pages linking *up* to it? (orphan-prevention — note if you can tell.)
+- Anchor text descriptive, not "click here."
+- **Never** suggest links to deleted pages (purchase/build, fix-flip/commercial, state hubs).
+
+**4. AEO / answer-engine readiness (cornerstone/hub/city)**
+- Above-fold ~50-word definition paragraph present?
+- "Key Takeaways" bullet block near the top?
+- Comparison table present and genuinely useful?
+- Numbered step list (HowTo) present?
+- FAQ: 8+ Q&A, question-phrased, schema count = visible count, collapsed by default, gold `+`.
+- TDHCA / TSAHC cited by name with outbound links where DPA is relevant (co-citation strategy).
+
+**5. Schema completeness**
+- Single `@graph`, parses clean. Nodes present: WebPage, FinancialService
+  (**name = "Adam Bartling | Texas Mortgage Broker"** — retired brand names are a hard FAIL),
+  Person, MortgageLoan, BreadcrumbList (item objects), FAQPage, HowTo, ImageObject(hero).
+- Person node has knowsAbout / hasOccupation / alumniOf (US Army) / sameAs (NMLS + LinkedIn).
+- areaServed = Texas only. BreadcrumbList items are objects with @id+name, **all names lowercase**
+  (July 2026 rule — visible crumb and Yoast breadcrumbs-title field lowercase too).
+- Note any missing node as a suggestion (e.g., "add HowTo schema for the existing step list").
+
+**6. Images & media**
+- Hero: eager + fetchpriority="high" + width/height + keyphrase-bearing alt.
+- Below-fold: lazy + width/height + descriptive alt (note thin/duplicate alt text).
+- All image URLs return 200 (verify_links_images.py; nmlsconsumeraccess.org 403-to-curl exemption).
+- Suggest a relevant image where a long text section has none (engagement + alt-text keyword real estate).
+
+**7. Core Web Vitals / performance hints**
+- Hero preloaded in the WPCode head block; fonts preloaded (no @import).
+- Explicit width/height on all images (prevents CLS).
+- No render-blocking inline `<style>`/`<script>` beyond what's required (WPCode-Snippet pages may
+  carry their tool's `<style>`/`<script>` — that's by design).
+
+**8. Content depth & GSC opportunities (refreshed July 19, 2026)**
+- Cornerstone ≥ 2,500 words; note thin sections.
+- Cross-reference current Search Console clusters:
+  * **VA construction is the franchise** — ~5,700 impressions/90d; "va construction loan texas" at
+    pos ~11 (page 2). Suggest links UP to /va-construction-loan-texas/ from every relevant page.
+  * **VA approved builders** — "va approved builders" 749 imp pos ~28 + Cedar Park / Leander /
+    Liberty Hill city variants (~560 imp combined, pos 24–32). /va-approved-builders-texas/ is the
+    build-out target; suggest supporting links and sections.
+  * **FHA construction** — "fha construction loan texas" 115 imp pos ~17.
+  * **Residential construction** — 4,000+ imp but pos ~60; needs consolidation + content depth.
+  * Military markets: Killeen/Fort Hood, El Paso/Fort Bliss, JBSA; Houston suburbs Katy/Sugar Land.
+- Texas-authority angles competitors miss: 50(a)(6) homestead rules, homestead exemption + property
+  tax, Texas Veterans Land Board (VLB), TDHCA/TSAHC DPA, MUD districts, barndominium financing
+  ("va loan to build a barndominium" is a live GSC query).
+
+**9. E-E-A-T & trust**
+- Author bio with Adam's veteran credentials + NMLS, Army photo, links to /about-us/.
+- **Verified Google reviews ONLY** (Clifford Joe, Steven Kinne, Kathaleen Megan Ainsworth, Natasha
+  Camacho, Bill Cannon, Joseph Rufo, Matthew Dravis, Jarod Oommen, Liliana Paulino). Review text is
+  real Google review text, quoted verbatim — never edited, never invented. Omit the section if no
+  real text exists. Review + AggregateRating schema where reviews are shown.
+- Broker positioning consistent ("we work for you, not a bank").
+
+**10. CTA & UX**
+- Exactly 3 LET'S TALK CTAs (above fold, mid, end) → /contact-us/. JS-rendered CTAs (e.g., prequal
+  result screen) count toward the 3. "Apply Now" lives ONLY in header/footer/contact-us.
+- Mobile: tap targets ≥ ~44px, tables scroll, no fixed-width overflow.
+- Reading flow: scannable, short paragraphs, gold accents per the design system.
+- No PDFs / downloadable resources — live pages and live calculators only.
 
 ---
 
-## One-time setup (5 minutes)
+## Per-page report template  →  `reports/<slug>.md`
 
-1. **Drop this folder into a Claude Code project** (open the folder in Claude Code, or `cd` into it and run `claude`).
-2. **Add your page source files** to `pages/` if you have them (e.g., copy your exported WPCode/Custom-HTML
-   blocks). Any page you don't have locally, Claude Code will `web_fetch` from the live URL.
-3. **Choose where corrected pages land (your Google Drive).** Two options:
-   - **Recommended — Google Drive for Desktop:** install it, then set `OUTPUT_DIR` to the synced path, e.g.
-     - macOS: `~/Library/CloudStorage/GoogleDrive-you@gmail.com/My Drive/Bartling-Updated-Pages/`
-     - Windows: `G:\My Drive\Bartling-Updated-Pages\`
-     Files written there auto-upload to Drive. Tell Claude Code this path in your first message.
-   - **Or — Google Drive MCP:** connect the Google Drive connector in Claude Code; it can upload directly.
-4. **Confirm Python 3** is available (`python3 --version`). No packages needed — standard library only.
+```markdown
+# <slug> — page report (<date>)
 
----
+**Page type:** <cornerstone|hub|city|calculator>   **TX-only marketing:** yes
+**File dropped to Drive:** <OUTPUT_DIR>/<slug>.html   **Version:** v<n>
 
-## How to run it
+## Compliance (qc_scan v2)
+- RESULT: PASS
+- Fixed this pass: <bullet list of edits, or "none — page was already clean">
+- Images/links: <all 200 | list any fixed | nmlsconsumeraccess 403-exempt>
 
-Paste this as your first message in Claude Code:
+## Flagged (decisions for Adam — NOT auto-changed)
+- <e.g., high-cost county FHA figure, blog slug convention, fact to verify>
 
-> Read `CLAUDE.md` and `worklist.csv`. My Google Drive output folder is:
-> `<paste your OUTPUT_DIR here>`.
-> Start with the first `pending` page in the worklist. Load its source (fetch the live URL if it's not in
-> `pages/`), run `scripts/qc_scan.py`, fix every FAIL surgically, re-scan until clean, run
-> `scripts/verify_links_images.py`, write the corrected file to my Drive folder, write the report to
-> `reports/`, update the worklist, then **stop and show me a summary before the next page.**
-
-Then just reply **"next"** to advance one page at a time. To run several at once, say
-**"run the next 5 without stopping"** or **"run all pending pages"** — it'll still drop one file +
-one report per page to Drive as it goes, and finish with a master summary.
-
----
-
-## What it will and won't do
-
-**Will (auto-fix as hard FAILs):** Movement Mortgage, "direct lender" (outside the footer disclaimer),
-"30+ states"/any multi-state claim, **retired brand strings** ("Bartling Lending", "Bartling Lending
-Partners", "Adam Bartling & Team" — verbatim customer review text is the sole exemption), **retired
-products** (Fix & Flip / Hard Money / Commercial), links to **deleted pages** (/purchase-a-home-texas/,
-/build-a-home/, /commercial-long-term-loans/, fix-and-flip, state-mortgage pages), **wrong NAP**
-(Katy/Firethorne/1700 Walger/"Roseberg"), stale `$524,225` FHA limit, phone/email in body, "Apply Now"
-in body, PDF/downloadable links, numeric rate figures, same-day/24-hour speed claims, `&&` in scripts,
-inline handlers, CTA count, FAQ/schema mismatch, non-lowercase breadcrumb schema names,
-FinancialService schema name, `areaServed` United States, off-whitelist internal links, dead images,
-and the 4–5 draws rule — then write a clean, paste-ready page to Drive plus a suggestions report.
-
-**Won't (it flags these instead of changing them):**
-- **High-cost county FHA figures** — sources conflict for 2026; it uses the $541,287 floor as the safe
-  baseline and tells you to confirm specific counties against HUD's lookup.
-- **Blog slug convention** — live posts use top-level `/blog-{slug}/` while the prior standard said
-  `/blog/{slug}/`. Flagged open; the bot reports which convention each page uses and never moves URLs.
-- The **global theme header/footer** — out of scope (those are site-wide, not per-page).
-- **Deleted pages** (out-of-state hubs, purchase/build, fix-flip/commercial) — never edited or
-  recreated; they are 301-redirected.
-
----
+## SEO / UX suggestions (new — not yet done)
+1. <highest-value first, each with the why + the specific change>
+2. ...
 
 ## Notes
-
-- Each output file is a **standalone block ready to paste back into WordPress.** JS-heavy pages
-  (calculators, the homepage prequal tool) are **WPCode HTML Snippets** deployed via shortcode (not
-  Custom HTML blocks — WordPress strips `<style>`/`<script>` from those). A `<style>` block is
-  **allowed** when the page's changelog comment says "WPCode HTML Snippet"; otherwise it's a FAIL.
-- The scanner ignores HTML comments, so changelog notes that mention removed strings (e.g. "removed
-  '30+ States'") won't trip a false FAIL.
-- The 3-CTA rule counts JS-rendered LET'S TALK buttons (e.g., the prequal result screen) toward the 3.
-- Re-run `qc_scan.py` after every edit — it's instant and it's the safety net.
+- <anything Adam should know before pasting back into WordPress>
+```
