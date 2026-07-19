@@ -1,194 +1,118 @@
-#!/usr/bin/env python3
-"""
-qc_scan.py — Bartling Lending page compliance scanner.
+# SEO_REVIEW_RUBRIC.md — Yoast-style advisory for each page
+### v2 — July 19, 2026 (matches CLAUDE.md July 2026)
 
-Usage:
-    python scripts/qc_scan.py pages/fha-loan-texas.html
+After a page passes compliance (`qc_scan.py` = PASS), evaluate it against the checklist below and
+write **only the high-value, *new* suggestions** — things we have NOT already done — into
+`reports/<slug>.md`. Quality over quantity: 3–8 strong recommendations beat 30 trivial ones.
+Never recommend fee-based directories or anything that violates the rules in CLAUDE.md.
 
-Exit code 0 = no hard FAILs. Exit code 1 = one or more FAILs (must fix).
-WARNs are advisory (review, may be intentional). All checks ignore HTML comments
-for body rules, since changelog comments legitimately describe removed strings.
+---
 
-This is the same sweep Claude ran by hand, encoded once. Re-run after every edit.
-"""
-import sys, re, json
+## What to evaluate
 
-FAIL, WARN, INFO = "FAIL", "WARN", "INFO"
+**1. Title & meta (the Yoast core)**
+- Title tag ≤ ~60 chars, leads with the focus keyphrase, includes "Texas," ends with brand
+  ("Adam Bartling" or "Adam Bartling | Texas Mortgage Broker" as space allows).
+- Meta description ≤ ~155 chars, contains the keyphrase + a concrete hook (broker value / CTA) +
+  "Texas." **Never a numeric rate figure.**
+- Focus keyphrase appears in: H1, first 100 words, at least one H2, the meta, the slug, one alt text.
+- Slug is clean, singular ("…-loan-texas"), matches the canonical. Canonical includes the trailing
+  slash (slashless manual canonicals split signals — flag any).
 
-# Forbidden substrings in RENDERED BODY (case-insensitive). (label, regex)
-FORBIDDEN = [
-    ("Movement Mortgage",        r"movement\s+mortgage|movement\.com"),
-    (".net domain",              r"bartlinglending\.net"),
-    ("'direct lender/lending'",  r"direct\s+lend(er|ing)"),
-    ("'30+ States' language",    r"30\s*\+?\s*states|texas\s*&(?:amp;)?\s*30|and\s+30\+?\s+states"),
-    ("'40+ States' language",    r"40\s*\+?\s*states"),
-    ("'Non-QM'",                 r"non-?qm"),
-    ("'ITIN'",                   r"\bITIN\b"),
-    ("'Apply Now' in body",      r"apply\s+now"),
-    ("Stale 2025 FHA limit",     r"524,?225|\$524k"),
-]
+**2. Heading structure & keyword coverage**
+- Exactly one H1; logical H2 > H3 nesting; no skipped levels.
+- H2s phrased as natural questions where it helps AEO ("What is…", "How much…", "Can I…").
+- LSI / variation coverage (e.g., for FHA: "down payment assistance," "MIP," "580 credit score,"
+  "first-time buyer," county names) — note gaps.
 
-# Phone / email in body
-RE_PHONE = re.compile(r"\b(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]\d{3}[-.\s]\d{4}\b")
-RE_EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+**3. Internal linking (whitelist only — see CLAUDE.md §7)**
+- Does the page link OUT to 3–6 relevant whitelisted cornerstones? Flag under-linking.
+- Does it link to the pages a reader would naturally want next (e.g., FHA ↔ First-Time ↔ Conventional)?
+- For cornerstones: are city/hub pages linking *up* to it? (orphan-prevention — note if you can tell.)
+- Anchor text descriptive, not "click here."
+- **Never** suggest links to deleted pages (purchase/build, fix-flip/commercial, state hubs).
 
-WHITELIST = {
-    "/", "/contact-us/", "/about-us/",
-    "/va-home-loan-texas/", "/fha-loan-texas/", "/conventional-mortgage-loan-texas/",
-    "/first-time-homebuyer-texas/", "/residential-construction-loan-texas/",
-    "/va-construction-loan-texas/", "/cash-out-refinance-mortgage-texas/",
-    "/refinance-home-loan-texas/", "/home-equity-loan-texas/", "/dscr-loan-texas/",
-    "/bank-statement-loan-texas/", "/reverse-mortgage-texas/",
-}
+**4. AEO / answer-engine readiness (cornerstone/hub/city)**
+- Above-fold ~50-word definition paragraph present?
+- "Key Takeaways" bullet block near the top?
+- Comparison table present and genuinely useful?
+- Numbered step list (HowTo) present?
+- FAQ: 8+ Q&A, question-phrased, schema count = visible count, collapsed by default, gold `+`.
+- TDHCA / TSAHC cited by name with outbound links where DPA is relevant (co-citation strategy).
 
-def strip_comments(s):
-    return re.sub(r"<!--.*?-->", "", s, flags=re.DOTALL)
+**5. Schema completeness**
+- Single `@graph`, parses clean. Nodes present: WebPage, FinancialService
+  (**name = "Adam Bartling | Texas Mortgage Broker"** — retired brand names are a hard FAIL),
+  Person, MortgageLoan, BreadcrumbList (item objects), FAQPage, HowTo, ImageObject(hero).
+- Person node has knowsAbout / hasOccupation / alumniOf (US Army) / sameAs (NMLS + LinkedIn).
+- areaServed = Texas only. BreadcrumbList items are objects with @id+name, **all names lowercase**
+  (July 2026 rule — visible crumb and Yoast breadcrumbs-title field lowercase too).
+- Note any missing node as a suggestion (e.g., "add HowTo schema for the existing step list").
 
-def scripts_only(s):
-    return "\n".join(re.findall(r"<script\b[^>]*>(.*?)</script>", s, flags=re.DOTALL | re.I))
+**6. Images & media**
+- Hero: eager + fetchpriority="high" + width/height + keyphrase-bearing alt.
+- Below-fold: lazy + width/height + descriptive alt (note thin/duplicate alt text).
+- All image URLs return 200 (verify_links_images.py; nmlsconsumeraccess.org 403-to-curl exemption).
+- Suggest a relevant image where a long text section has none (engagement + alt-text keyword real estate).
 
-def line_of(src, idx):
-    return src.count("\n", 0, idx) + 1
+**7. Core Web Vitals / performance hints**
+- Hero preloaded in the WPCode head block; fonts preloaded (no @import).
+- Explicit width/height on all images (prevents CLS).
+- No render-blocking inline `<style>`/`<script>` beyond what's required (WPCode-Snippet pages may
+  carry their tool's `<style>`/`<script>` — that's by design).
 
-def main(path):
-    raw = open(path, encoding="utf-8").read()
-    body = strip_comments(raw)
-    findings = []  # (level, message)
+**8. Content depth & GSC opportunities (refreshed July 19, 2026)**
+- Cornerstone ≥ 2,500 words; note thin sections.
+- Cross-reference current Search Console clusters:
+  * **VA construction is the franchise** — ~5,700 impressions/90d; "va construction loan texas" at
+    pos ~11 (page 2). Suggest links UP to /va-construction-loan-texas/ from every relevant page.
+  * **VA approved builders** — "va approved builders" 749 imp pos ~28 + Cedar Park / Leander /
+    Liberty Hill city variants (~560 imp combined, pos 24–32). /va-approved-builders-texas/ is the
+    build-out target; suggest supporting links and sections.
+  * **FHA construction** — "fha construction loan texas" 115 imp pos ~17.
+  * **Residential construction** — 4,000+ imp but pos ~60; needs consolidation + content depth.
+  * Military markets: Killeen/Fort Hood, El Paso/Fort Bliss, JBSA; Houston suburbs Katy/Sugar Land.
+- Texas-authority angles competitors miss: 50(a)(6) homestead rules, homestead exemption + property
+  tax, Texas Veterans Land Board (VLB), TDHCA/TSAHC DPA, MUD districts, barndominium financing
+  ("va loan to build a barndominium" is a live GSC query).
 
-    # ---- forbidden substrings in body ----
-    for label, pat in FORBIDDEN:
-        for m in re.finditer(pat, body, flags=re.I):
-            findings.append((FAIL, f"{label}: '{m.group(0)}' (line ~{line_of(body, m.start())})"))
+**9. E-E-A-T & trust**
+- Author bio with Adam's veteran credentials + NMLS, Army photo, links to /about-us/.
+- **Verified Google reviews ONLY** (Clifford Joe, Steven Kinne, Kathaleen Megan Ainsworth, Natasha
+  Camacho, Bill Cannon, Joseph Rufo, Matthew Dravis, Jarod Oommen, Liliana Paulino). Review text is
+  real Google review text, quoted verbatim — never edited, never invented. Omit the section if no
+  real text exists. Review + AggregateRating schema where reviews are shown.
+- Broker positioning consistent ("we work for you, not a bank").
 
-    # ---- phone / email in body (allow inside JSON-LD identifier/NMLS? no — NMLS is text not phone) ----
-    body_no_scripts = re.sub(r"<script\b[^>]*>.*?</script>", "", body, flags=re.DOTALL | re.I)
-    for m in RE_PHONE.finditer(body_no_scripts):
-        findings.append((FAIL, f"Phone number in body: '{m.group(0)}'"))
-    for m in RE_EMAIL.finditer(body_no_scripts):
-        findings.append((WARN, f"Possible email in body: '{m.group(0)}' (confirm it's not a schema URL)"))
+**10. CTA & UX**
+- Exactly 3 LET'S TALK CTAs (above fold, mid, end) → /contact-us/. JS-rendered CTAs (e.g., prequal
+  result screen) count toward the 3. "Apply Now" lives ONLY in header/footer/contact-us.
+- Mobile: tap targets ≥ ~44px, tables scroll, no fixed-width overflow.
+- Reading flow: scannable, short paragraphs, gold accents per the design system.
+- No PDFs / downloadable resources — live pages and live calculators only.
 
-    # ---- inline event handlers ----
-    for m in re.finditer(r"\son(click|input|change|load|submit|mouseover)\s*=", body, flags=re.I):
-        findings.append((FAIL, f"Inline event handler 'on{m.group(1)}=' (line ~{line_of(body, m.start())}) — use addEventListener"))
+---
 
-    # ---- && inside <script> ----
-    js = scripts_only(raw)
-    # exclude JSON-LD blocks from the && check (JSON can't contain &&; this catches real JS)
-    real_js = "\n".join(
-        b for b in re.findall(r"<script\b(?![^>]*ld\+json)[^>]*>(.*?)</script>", raw, flags=re.DOTALL | re.I)
-    )
-    if "&&" in real_js:
-        findings.append((FAIL, "'&&' found inside a <script> — WordPress encodes it to &#038;; use nested if/while"))
+## Per-page report template  →  `reports/<slug>.md`
 
-    # ---- <style> blocks ----
-    if re.search(r"<style\b", body, flags=re.I):
-        findings.append((FAIL, "<style> block present — all CSS must be inline"))
+```markdown
+# <slug> — page report (<date>)
 
-    # ---- CTA count (LET'S TALK buttons → /contact-us/), comments excluded ----
-    lets_talk = len(re.findall(r"LET'S TALK", body))
-    if lets_talk != 3:
-        findings.append((FAIL, f"LET'S TALK CTA count = {lets_talk} (must be exactly 3)"))
-    contact_links = re.findall(r'href="https://bartlinglending\.com/contact-us/"', body)
-    if len(contact_links) < 3:
-        findings.append((WARN, f"Only {len(contact_links)} link(s) to /contact-us/ — expected at least the 3 CTAs"))
+**Page type:** <cornerstone|hub|city|calculator>   **TX-only marketing:** yes
+**File dropped to Drive:** <OUTPUT_DIR>/<slug>.html   **Version:** v<n>
 
-    # ---- FAQ <details> vs FAQPage schema ----
-    details = len(re.findall(r"<details\b", body))
-    # ---- JSON-LD parse + areaServed + FAQ count ----
-    faq_q = None
-    area_has_us = False
-    for block in re.findall(r'<script[^>]*type=["\']application/ld\+json["\'][^>]*>(.*?)</script>',
-                            raw, flags=re.DOTALL | re.I):
-        try:
-            data = json.loads(block)
-        except Exception as e:
-            findings.append((FAIL, f"JSON-LD does not parse: {e}"))
-            continue
-        nodes = data.get("@graph", [data]) if isinstance(data, dict) else []
-        for n in nodes:
-            if not isinstance(n, dict):
-                continue
-            if n.get("@type") == "FAQPage":
-                faq_q = len(n.get("mainEntity", []))
-            area = n.get("areaServed")
-            if area:
-                txt = json.dumps(area)
-                if "United States" in txt or "Country" in txt:
-                    area_has_us = True
-    if details < 8:
-        findings.append((WARN, f"Only {details} FAQ <details> (minimum 8 for cornerstone/hub/city)"))
-    if faq_q is not None and faq_q != details:
-        findings.append((FAIL, f"FAQ mismatch: {details} <details> vs {faq_q} FAQPage schema questions"))
-    if area_has_us:
-        findings.append((FAIL, "schema areaServed includes United States/Country — must be Texas only"))
+## Compliance (qc_scan v2)
+- RESULT: PASS
+- Fixed this pass: <bullet list of edits, or "none — page was already clean">
+- Images/links: <all 200 | list any fixed | nmlsconsumeraccess 403-exempt>
 
-    # ---- construction draws ----
-    if re.search(r"5\s*[–-]\s*7\s*draw", body, flags=re.I) or re.search(r"5\s+to\s+7\s+draw", body, flags=re.I):
-        findings.append((FAIL, "Construction draws stated as 5–7 — Texas rule is 4–5"))
+## Flagged (decisions for Adam — NOT auto-changed)
+- <e.g., high-cost county FHA figure, blog slug convention, fact to verify>
 
-    # ---- internal links not on whitelist ----
-    for m in re.finditer(r'href="https://bartlinglending\.com(/[^"]*)"', body):
-        path_only = m.group(1)
-        base = re.sub(r"#.*$", "", path_only)
-        if base in WHITELIST:
-            continue
-        if base.startswith("/blog/") or base.startswith("/learning-center/"):
-            continue
-        if re.match(r"^/[a-z0-9-]+-[a-z-]+-tx/$", base):  # city page pattern /{loan}-{city}-tx/
-            continue
-        findings.append((WARN, f"Internal link not on whitelist: {path_only}"))
+## SEO / UX suggestions (new — not yet done)
+1. <highest-value first, each with the why + the specific change>
+2. ...
 
-    # ---- hero image attrs (first <img>) ----
-    imgs = re.findall(r"<img\b[^>]*>", body, flags=re.I)
-    if imgs:
-        hero = imgs[0]
-        for attr in ("loading=\"eager\"", "fetchpriority=\"high\"", "width=", "height=", "alt="):
-            if attr not in hero:
-                findings.append((WARN, f"Hero <img> missing {attr.rstrip('=\"')}"))
-        for img in imgs[1:]:
-            if "alt=" not in img:
-                findings.append((WARN, "Below-fold <img> missing alt text"))
-            if 'loading="lazy"' not in img and 'loading="eager"' not in img:
-                findings.append((WARN, "Below-fold <img> missing loading attribute"))
-    else:
-        # background-image heroes are allowed; just inform
-        findings.append((INFO, "No <img> hero found (CSS background hero is acceptable; ensure it's preloaded)"))
-
-    # ---- footer line ----
-    if "NMLS# 2213358" not in body:
-        findings.append((WARN, "NMLS# 2213358 footer line not found"))
-    if "Serving Texas" not in body and "Serving All of Texas" not in body:
-        findings.append((WARN, "No 'Serving Texas' / 'Serving All of Texas' line found"))
-
-    # ---- word count (rough) ----
-    text = re.sub(r"<[^>]+>", " ", re.sub(r"<script.*?</script>", " ", body, flags=re.DOTALL | re.I))
-    words = len(re.sub(r"\s+", " ", text).split())
-    if words < 2500:
-        findings.append((INFO, f"~{words} words (cornerstones should be 2,500+; OK for shorter page types)"))
-
-    # ---- brand report (do NOT fail) ----
-    if "Adam Bartling & Team" in body or "Adam Bartling &amp; Team" in body:
-        findings.append((INFO, "Brand string in use: 'Adam Bartling & Team' (working default)"))
-    if re.search(r"\bBartling Lending\b(?!\s+Partners)", body):
-        findings.append((INFO, "Brand string 'Bartling Lending' also present — confirm intended (open decision)"))
-
-    # ---- report ----
-    fails = [f for f in findings if f[0] == FAIL]
-    warns = [f for f in findings if f[0] == WARN]
-    infos = [f for f in findings if f[0] == INFO]
-    print(f"\n=== QC SCAN: {path} ===")
-    print(f"~{words} words | {details} FAQ <details>"
-          + (f" | {faq_q} schema Qs" if faq_q is not None else " | (no FAQPage schema)"))
-    for level, group in ((FAIL, fails), (WARN, warns), (INFO, infos)):
-        if group:
-            print(f"\n[{level}]  ({len(group)})")
-            for _, msg in group:
-                print(f"  - {msg}")
-    print(f"\nRESULT: {'FAIL' if fails else 'PASS'}  ({len(fails)} fail, {len(warns)} warn)\n")
-    return 1 if fails else 0
-
-if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python scripts/qc_scan.py <file.html>")
-        sys.exit(2)
-    sys.exit(main(sys.argv[1]))
+## Notes
+- <anything Adam should know before pasting back into WordPress>
+```
